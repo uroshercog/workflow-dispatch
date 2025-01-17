@@ -6,8 +6,14 @@ inputs:
     description: 'Name or ID of workflow to run'
     required: true
   token:
-    description: 'GitHub token with repo write access, can NOT use secrets.GITHUB_TOKEN, see readme'
-    required: true
+    description: 'GitHub token with repo write access, can NOT use secrets.GITHUB_TOKEN, see README.md. If not provided, app-id and app-private-key must be provided. If token is set it takes precedence over app-id and app-private-key.'
+    required: false
+  app-id:
+    description: 'GitHub App ID with access to Actions API.'
+    required: false
+  app-private-key:
+    description: 'GitHub App Private Key of the app with access to Actions API.'
+    required: false
   inputs:
     description: 'Inputs to pass to the workflow, must be a JSON string. All values must be strings (even if used as boolean or number)'
     required: false

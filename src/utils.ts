@@ -30,6 +30,13 @@ function parse(inputsJson: string) {
 export function getArgs() {
   // Required inputs
   const token = core.getInput('token')
+  const appId = core.getInput('app-id')
+  const appPrivateKey = core.getInput('app-private-key')
+
+  if (!token && (!appId || !appPrivateKey)) {
+    throw new Error('Either token or app-id and app-private-key must be provided')
+  }
+
   const workflowRef = core.getInput('workflow')
   // Optional inputs, with defaults
   const ref = core.getInput('ref')   || github.context.ref
@@ -54,6 +61,8 @@ export function getArgs() {
 
   return {
     token,
+    appId,
+    appPrivateKey,
     workflowRef,
     ref,
     owner,

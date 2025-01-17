@@ -1,6 +1,6 @@
 # GitHub Action for Dispatching Workflows
 
-This action triggers another GitHub Actions workflow, using the `workflow_dispatch` event.  
+This action triggers another GitHub Actions workflow, using the `workflow_dispatch` event.
 The workflow must be configured for this event type e.g. `on: [workflow_dispatch]`
 
 This allows you to chain workflows, the classic use case is have a CI build workflow, trigger a CD release/deploy workflow when it completes. Allowing you to maintain separate workflows for CI and CD, and pass data between them as required.
@@ -23,8 +23,16 @@ For details of the `workflow_dispatch` even see [this blog post introducing this
 
 > **Required.** A GitHub access token (PAT) with write access to the repo in question.
 >
-> **NOTE.** The automatically provided token e.g. `${{ secrets.GITHUB_TOKEN }}` can not be used, GitHub prevents this token from being able to fire the  `workflow_dispatch` and `repository_dispatch` event. [The reasons are explained in the docs](https://docs.github.com/en/actions/reference/events-that-trigger-workflows#triggering-new-workflows-using-a-personal-access-token).  
+> **NOTE.** The automatically provided token e.g. `${{ secrets.GITHUB_TOKEN }}` can not be used, GitHub prevents this token from being able to fire the  `workflow_dispatch` and `repository_dispatch` event. [The reasons are explained in the docs](https://docs.github.com/en/actions/reference/events-that-trigger-workflows#triggering-new-workflows-using-a-personal-access-token).
 > The solution is to manually create a PAT and store it as a secret e.g. `${{ secrets.PERSONAL_TOKEN }}`
+
+### `app-id`
+
+> **Optional.** The GitHub App ID with access to Actions API.
+
+### `app-private-key`
+
+> **Optional.** The GitHub App Private Key of the app with access to Actions API.
 
 ### `inputs`
 
@@ -101,7 +109,7 @@ For details of the `workflow_dispatch` even see [this blog post introducing this
 
 ### `workflow-logs`
 
-> The logs of the triggered workflow based if `inputs.workflow-logs` is set to either `output`, or `json-output`.  
+> The logs of the triggered workflow based if `inputs.workflow-logs` is set to either `output`, or `json-output`.
 > Based on the value, result will be:
 >
 > * `output`: Multiline string
@@ -247,6 +255,23 @@ on:
         type: string
         required: false
 ```
+
+### Invoke workflow with app-id and app-private-key
+
+```yaml
+- name: Invoke workflow with app-id and app-private-key
+  uses: the-actions-org/workflow-dispatch@v4
+  env:
+    RUN_NAME: ${{ github.repository }}/actions/runs/${{ github.run_id }}
+  with:
+    app-id: ${{ secrets.APP_ID }}
+    app-private-key: ${{ secrets.APP_PRIVATE_KEY }}
+    run-name: ${{ env.RUN_NAME }}
+    workflow: Another Workflow
+    inputs: >-
+      {
+        "run-name": "${{ env.RUN_NAME }}"
+      }
 
 ## Contributions
 
