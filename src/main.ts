@@ -6,10 +6,11 @@
 // ----------------------------------------------------------------------------
 
 import * as core from '@actions/core'
+import {createAppAuth} from '@octokit/auth-app'
+import {Octokit} from '@octokit/rest'
 import { formatDuration, getArgs, isTimedOut, sleep } from './utils'
 import { WorkflowHandler, WorkflowRunConclusion, WorkflowRunResult, WorkflowRunStatus } from './workflow-handler'
 import { handleWorkflowLogsPerJob } from './workflow-logs-handler'
-
 
 
 async function getFollowUrl(workflowHandler: WorkflowHandler, interval: number, timeout: number) {
@@ -60,13 +61,52 @@ function computeConclusion(start: number, waitForCompletionTimeout: number, resu
   if (conclusion === WorkflowRunConclusion.TIMED_OUT) throw new Error('Workflow run has failed due to timeout')
 }
 
-async function handleLogs(args: any, workflowHandler: WorkflowHandler) {
+async function handleLogs(octokit: Octokit, args: any, workflowHandler: WorkflowHandler) {
   try {
     const workflowRunId = await workflowHandler.getWorkflowRunId()
-    await handleWorkflowLogsPerJob(args, workflowRunId)
+    await handleWorkflowLogsPerJob(octokit, args, workflowRunId)
   } catch(e: any) {
     core.error(`Failed to handle logs of triggered workflow. Cause: ${e}`)
   }
+}
+
+async function setupOctokit(token: string, appId: string, appPrivateKey: string):Promise<Octokit> {
+  if(token) {
+    return new Octokit({
+      auth: token
+    })
+  }
+
+  return setupGitHubAppOctokit(appId, appPrivateKey)
+}
+
+async function setupGitHubAppOctokitClient(appId: string, privateKey: string, installationId?: any):Promise<Octokit> {
+  const auth : any = {
+    appId,
+    privateKey,
+  }
+
+  if(installationId) {
+    auth.installationId = installationId
+  }
+
+  return new Octokit({
+    authStrategy: createAppAuth,
+    auth,
+  })
+}
+
+async function setupGitHubAppOctokit(appId: string, privateKey: string):Promise<Octokit> {
+  const octokit = await setupGitHubAppOctokitClient(appId, privateKey)
+
+  const installations = await octokit.apps.listInstallations()
+  const installationId = installations.data[0].id
+
+  core.info(`Using installationId=${installationId}`)
+
+  // Recreate octokit with installationId which results in
+  // auto refresh of the token.
+  return setupGitHubAppOctokitClient(appId, privateKey, installationId)
 }
 
 //
@@ -75,7 +115,9 @@ async function handleLogs(args: any, workflowHandler: WorkflowHandler) {
 async function run(): Promise<void> {
   try {
     const args = getArgs()
-    const workflowHandler = new WorkflowHandler(args.token, args.workflowRef, args.owner, args.repo, args.ref, args.runName)
+
+    const octokit = await setupOctokit(args.token, args.appId, args.appPrivateKey)
+    const workflowHandler = new WorkflowHandler(octokit, args.workflowRef, args.owner, args.repo, args.ref, args.runName)
 
     // Trigger workflow run
     await workflowHandler.triggerWorkflow(args.inputs)
@@ -94,7 +136,7 @@ async function run(): Promise<void> {
     core.info('Waiting for workflow completion')
     const { result, start } = await waitForCompletionOrTimeout(workflowHandler, args.checkStatusInterval, args.waitForCompletionTimeout)
 
-    await handleLogs(args, workflowHandler)
+    await handleLogs(octokit, args, workflowHandler)
 
     core.setOutput('workflow-id', result?.id)
     core.setOutput('workflow-url', result?.url)

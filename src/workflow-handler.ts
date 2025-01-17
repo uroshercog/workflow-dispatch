@@ -1,6 +1,5 @@
 
 import * as core from '@actions/core'
-import * as github from '@actions/github'
 import { debug } from './debug'
 
 export enum WorkflowRunStatus {
@@ -44,19 +43,17 @@ export interface WorkflowRunResult {
 
 
 export class WorkflowHandler {
-  private octokit: any
   private workflowId?: number | string
   private workflowRunId?: number
   private triggerDate = 0
 
-  constructor(token: string,
+  constructor(
+    private octokit: any,
     private workflowRef: string,
     private owner: string,
     private repo: string,
     private ref: string,
     private runName: string) {
-    // Get octokit client for making API calls
-    this.octokit = github.getOctokit(token)
   }
 
   async triggerWorkflow(inputs: any) {
@@ -217,4 +214,3 @@ export class WorkflowHandler {
   }
 
 }
-
